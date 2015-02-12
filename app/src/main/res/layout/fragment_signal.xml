@@ -14,7 +14,7 @@
         android:scaleType="centerCrop"
         android:src="@drawable/red_signal_light"
         android:contentDescription="@string/siren_image_view_description"
-        android:clickable="false"
+        android:clickable="true"
         />
 
     <ProgressBar
