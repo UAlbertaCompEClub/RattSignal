@@ -1,0 +1,26 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context=".SignalActivity$PlaceholderFragment"
+                android:background="#ff131312"
+                android:focusable="false">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/sirenImageView"
+        android:layout_gravity="right|top"
+        android:scaleType="centerCrop"
+        android:src="@drawable/red_signal_light"
+        android:contentDescription="@string/siren_image_view_description"
+        android:clickable="false"
+        />
+
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progressBar"
+        android:layout_gravity="right|top"/>
+
+</FrameLayout>
