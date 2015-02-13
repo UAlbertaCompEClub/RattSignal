@@ -2,7 +2,6 @@ package ca.jviau.rattsignal.app;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.media.Image;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v4.app.Fragment;
@@ -32,9 +31,7 @@ public class SignalActivity extends ActionBarActivity {
 
     public static MobileServiceClient mClient;
     private MobileServiceTable<SignalResponder> mTable;
-
-    private ImageView mSirenImageView;
-    private ProgressBar mProgressBar;
+    private boolean isResponding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,41 +43,44 @@ public class SignalActivity extends ActionBarActivity {
                     .commit();
         }
 
-
-
-        this.mSirenImageView = (ImageView) findViewById(R.id.sirenImageView);
-        this.mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-        mProgressBar.setVisibility(ProgressBar.GONE);
+        SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
+        isResponding = sp.getBoolean(RESPONDING_KEY, false);
 
         setUpMobileService();
-        setUpImageViewOnClick();
     }
 
     private void setUpMobileService() {
         try {
+            SignalFragment fragment = (SignalFragment) getSupportFragmentManager().findFragmentById(R.id.container);
+            ProgressBar progressBar = fragment.getProgressBar();
+
             JsonObject azure_info = parseJsonFile(R.raw.mobile_services);
             mClient = new MobileServiceClient(
                     azure_info.get("url").getAsString(),
                     azure_info.get("key").getAsString(),
                     this)
-                    .withFilter(new ProgressFilter(this, mProgressBar));
-
+                    .withFilter(new ProgressFilter(this, progressBar));
             mTable = mClient.getTable(SignalResponder.class);
             NotificationsManager.handleNotifications(this, SENDER_ID, RattSignalHandler.class);
+
+            fragment.getImageView().setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    respondToSignal(!getResponding());
+                }
+            });
         } catch (Exception e) {
             createAndShowDialog(new Exception("There was an error connecting to the mobile service."), "Error");
         }
     }
 
-    private void setUpImageViewOnClick() {
-        mSirenImageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                respondToSignal(!getResponding());
-            }
-        });
-    }
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
 
+        SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
+        sp.edit().putBoolean(RESPONDING_KEY, isResponding).apply();
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -153,8 +153,7 @@ public class SignalActivity extends ActionBarActivity {
      *              If this device is responding to the call of RATT
      */
     private void setResponding(final boolean responding) {
-        SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
-        sp.edit().putBoolean(RESPONDING_KEY, responding).apply();
+        isResponding = responding;
     }
 
     /**
@@ -164,8 +163,7 @@ public class SignalActivity extends ActionBarActivity {
      *          Signal responding state
      */
     private boolean getResponding() {
-        SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
-        return sp.getBoolean(RESPONDING_KEY, false);
+        return isResponding;
     }
 
     /**
@@ -205,12 +203,27 @@ public class SignalActivity extends ActionBarActivity {
      */
     public static class SignalFragment extends Fragment {
 
+        private ImageView mImageView;
+        private ProgressBar mProgressBar;
+
         public SignalFragment() {
+        }
+
+        public ImageView getImageView() {
+            return mImageView;
+        }
+
+        public ProgressBar getProgressBar() {
+            return mProgressBar;
         }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
+            this.mImageView = (ImageView) container.findViewById(R.id.sirenImageView);
+            this.mProgressBar = (ProgressBar) container.findViewById(R.id.progressBar);
+            mProgressBar.setVisibility(ProgressBar.GONE);
+
             return inflater.inflate(R.layout.fragment_signal, container, false);
         }
     }
