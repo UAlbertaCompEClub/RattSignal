@@ -21,7 +21,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/progressBar"
-        android:layout_gravity="end|top"/>
+        android:layout_gravity="end|top" android:padding="10dp"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -42,5 +42,11 @@
         android:src="@drawable/ic_action_accept"
         android:cropToPadding="false"
         android:contentDescription="@string/responding_image_description"/>
+    <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/settingImageView" android:layout_gravity="left|top" android:padding="10dp"
+            android:contentDescription="@string/settings_image_description" android:clickable="true"
+            android:src="@drawable/ic_action_settings"/>
 
 </FrameLayout>

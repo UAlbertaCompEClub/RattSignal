@@ -39,10 +39,10 @@ public class RattSignalHandler extends NotificationsHandler {
 
     @Override
     public void onReceive(Context context, Bundle bundle) {
-        // TODO: read bundle for # of people at RATT, only notify if certain #.
-        Log.d(DEBUG_KEY, "Received push notification!");
+        // TODO: read bundle for # of people at RATT, only notify if certain #
         String nhMessage = bundle.getString("message");
         int count = Integer.parseInt(bundle.getString("count"));
+        Log.d(DEBUG_KEY, "Received push notification with message: " + nhMessage + " and count: " + count);
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         if (sp.getBoolean("push_notifications", false)) {
@@ -51,6 +51,7 @@ public class RattSignalHandler extends NotificationsHandler {
     }
 
     private void sendNotification(Context context, String msg, boolean ring, boolean vibrate) {
+        Log.d(DEBUG_KEY, "Triggering notification");
         NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
         PendingIntent contentIntent = PendingIntent.getActivity(context, 0,
@@ -61,10 +62,15 @@ public class RattSignalHandler extends NotificationsHandler {
                 .setSmallIcon(R.drawable.ic_launcher)
                 .setContentTitle("RATT SIGNAL!")
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
-                .setContentText(msg)
-                .setDefaults(Notification.DEFAULT_LIGHTS
-                        | (vibrate ? 0 : Notification.DEFAULT_VIBRATE)
-                        | (ring ? 0 : Notification.DEFAULT_SOUND));
+                .setContentText(msg);
+
+        if (vibrate) {
+            mBuilder.setVibrate(new long[] { 0, 1000, 500, 1000, 500, 1000 });
+        }
+
+        if (ring) {
+            mBuilder.setDefaults(Notification.DEFAULT_SOUND);
+        }
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());

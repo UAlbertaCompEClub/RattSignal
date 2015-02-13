@@ -92,6 +92,13 @@ public class SignalActivity extends Activity {
                 refreshRespondingCount();
             }
         });
+        mFragment.getSettingsImageView().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(SignalActivity.this, SettingsActivity.class);
+                startActivityForResult(intent, 0);
+            }
+        });
     }
 
     @Override
@@ -115,15 +122,6 @@ public class SignalActivity extends Activity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            Intent intent = new Intent(this, SettingsActivity.class);
-            startActivityForResult(intent, 0);
-            return true;
-        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -188,10 +186,10 @@ public class SignalActivity extends Activity {
             @Override
             public Void doInBackground(Void... params) {
                 try {
+                    setResponding(responding);
                     SignalResponder signal = new SignalResponder(Installation.id(SignalActivity.this), responding);
                     Log.d(DEBUG_TAG, "Putting value " + signal + " into mobile service");
                     mTable.insert(signal).get();
-                    setResponding(responding);
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -307,6 +305,7 @@ public class SignalActivity extends Activity {
 
         private ImageView mSirenImageView;
         private ImageView mRespondingImageView;
+        private ImageView mSettingsImageView;
         private TextView mCountTextView;
         private ProgressBar mProgressBar;
 
@@ -320,6 +319,10 @@ public class SignalActivity extends Activity {
 
         public ImageView getRespondingImageView() {
             return mRespondingImageView;
+        }
+
+        public ImageView getSettingsImageView() {
+            return mSettingsImageView;
         }
 
         public TextView getCountTextView() {
@@ -337,6 +340,7 @@ public class SignalActivity extends Activity {
             View view = inflater.inflate(R.layout.fragment_signal, container, false);
             this.mSirenImageView = (ImageView) view.findViewById(R.id.sirenImageView);
             this.mRespondingImageView = (ImageView) view.findViewById(R.id.respondingImageView);
+            this.mSettingsImageView = (ImageView) view.findViewById(R.id.settingImageView);
             this.mCountTextView = (TextView) view.findViewById(R.id.countTextView);
             this.mProgressBar = (ProgressBar) view.findViewById(R.id.progressBar);
             mProgressBar.setVisibility(ProgressBar.GONE);

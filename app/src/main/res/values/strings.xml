@@ -7,5 +7,6 @@
     <string name="siren_image_view_description">Red Siren Image</string>
     <string name="signal_default_text">signal off</string>
     <string name="responding_image_description">Responding checkmark image</string>
+    <string name="settings_image_description">Settings button</string>
 
 </resources>
