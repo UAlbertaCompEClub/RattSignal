@@ -32,4 +32,14 @@ public class SignalResponder {
     public void setResponding(boolean responding) {
         this.responding = responding;
     }
+
+    @Override
+    public String toString() {
+        return "SignalResponder: " + id + " responding: " + responding;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return (o instanceof SignalResponder) && this.id.equals(((SignalResponder) o).id);
+    }
 }

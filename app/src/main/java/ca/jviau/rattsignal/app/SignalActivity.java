@@ -58,6 +58,8 @@ public class SignalActivity extends Activity {
         this.mFragment = fragment;
         setUpMobileService();
         setUpOnClicks();
+        mFragment.setResponding(isResponding);
+        refreshRespondingCount();
     }
 
     private void setUpMobileService() {
@@ -150,8 +152,8 @@ public class SignalActivity extends Activity {
           @Override
         public Void doInBackground(Void... params) {
               try {
-                  MobileServiceList<SignalResponder> results = mTable.top(0).includeInlineCount().execute().get();
-                  final int count = results.getTotalCount();
+                  MobileServiceList<SignalResponder> results = mTable.where().field("responding").eq(true).execute().get();
+                  final int count = results.size();
                   Log.d(DEBUG_TAG, String.format("Retrieved count of %d responders.", count));
 
                   runOnUiThread(new Runnable() {
@@ -160,17 +162,17 @@ public class SignalActivity extends Activity {
                           if (count > 0) {
                               mFragment.getCountTextView().setText(String.format("%d responding", count));
                           } else {
-                              mFragment.getCountTextView().setText("");
+                              mFragment.getCountTextView().setText("signal off");
                           }
                       }
                   });
               } catch (Exception e) {
                   e.printStackTrace();
-                  createAndShowDialog(e, "Error");
+                  createAndShowDialogOnUi(e, "Error");
               }
               return null;
           }
-        };
+        }.execute();
     }
 
     /**
@@ -186,7 +188,9 @@ public class SignalActivity extends Activity {
             @Override
             public Void doInBackground(Void... params) {
                 try {
-                    mTable.insert(new SignalResponder(Installation.id(SignalActivity.this), responding)).get();
+                    SignalResponder signal = new SignalResponder(Installation.id(SignalActivity.this), responding);
+                    Log.d(DEBUG_TAG, "Putting value " + signal + " into mobile service");
+                    mTable.insert(signal).get();
                     setResponding(responding);
 
                     runOnUiThread(new Runnable() {
@@ -195,10 +199,10 @@ public class SignalActivity extends Activity {
                             mFragment.setResponding(responding);
                         }
                     });
-
+                    refreshRespondingCount();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    createAndShowDialog(e, "Error");
+                    createAndShowDialogOnUi(e, "Error");
                 }
 
                 return null;
@@ -225,6 +229,43 @@ public class SignalActivity extends Activity {
      */
     private boolean getResponding() {
         return isResponding;
+    }
+
+    /**
+     * Creates a dialog and shows it
+     *
+     * @param exception
+     *            The exception to show in the dialog
+     * @param title
+     *            The dialog title
+     */
+    private void createAndShowDialogOnUi(final Exception exception, final String title) {
+        Throwable ex = exception;
+        if(exception.getCause() != null){
+            ex = exception.getCause();
+        }
+        createAndShowDialogOnUi(ex.getMessage(), title);
+    }
+
+    /**
+     * Creates a dialog and shows it
+     *
+     * @param message
+     *            The dialog message
+     * @param title
+     *            The dialog title
+     */
+    private void createAndShowDialogOnUi(final String message, final String title) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(SignalActivity.this);
+
+                builder.setMessage(message);
+                builder.setTitle(title);
+                builder.create().show();
+            }
+        });
     }
 
     /**

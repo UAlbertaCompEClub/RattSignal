@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 
+import android.util.Log;
 import com.microsoft.windowsazure.notifications.NotificationsHandler;
 
 /**
@@ -19,6 +20,7 @@ import com.microsoft.windowsazure.notifications.NotificationsHandler;
  * @since 2015-02-10
  */
 public class RattSignalHandler extends NotificationsHandler {
+    public static final String DEBUG_KEY = "RattSignalHandler";
 
     public static final int NOTIFICATION_ID = 1;
 
@@ -38,8 +40,9 @@ public class RattSignalHandler extends NotificationsHandler {
     @Override
     public void onReceive(Context context, Bundle bundle) {
         // TODO: read bundle for # of people at RATT, only notify if certain #.
+        Log.d(DEBUG_KEY, "Received push notification!");
         String nhMessage = bundle.getString("message");
-        int count = bundle.getInt("count");
+        int count = Integer.parseInt(bundle.getString("count"));
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         if (sp.getBoolean("push_notifications", false)) {
