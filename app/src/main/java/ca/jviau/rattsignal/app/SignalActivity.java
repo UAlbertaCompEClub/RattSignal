@@ -1,10 +1,11 @@
 package ca.jviau.rattsignal.app;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Fragment;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -25,13 +26,12 @@ import com.microsoft.windowsazure.notifications.NotificationsManager;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.ExecutionException;
 
 
-public class SignalActivity extends ActionBarActivity {
+public class SignalActivity extends Activity {
 
     public static final String DEBUG_TAG = "SignalActivity";
-    public static final String SENDER_ID = "113";
+    public static final String SENDER_ID = "652901739903";
     public static final String RESPONDING_KEY = "responding";
 
     public static MobileServiceClient mClient;
@@ -44,22 +44,25 @@ public class SignalActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signal);
         if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
+            getFragmentManager().beginTransaction()
                     .add(R.id.container, new SignalFragment())
                     .commit();
         }
 
-        this.mFragment = (SignalFragment) getSupportFragmentManager().findFragmentById(R.id.container);
-
+        Log.d(DEBUG_TAG, "Getting isResponding from shared preferences");
         SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
         isResponding = sp.getBoolean(RESPONDING_KEY, false);
+    }
 
+    public void onFragmentReady(SignalFragment fragment) {
+        this.mFragment = fragment;
         setUpMobileService();
         setUpOnClicks();
     }
 
     private void setUpMobileService() {
         try {
+            Log.d(DEBUG_TAG, "Initialising azure mobile service...");
             JsonObject azure_info = parseJsonFile(R.raw.mobile_services);
             mClient = new MobileServiceClient(
                     azure_info.get("url").getAsString(),
@@ -69,6 +72,7 @@ public class SignalActivity extends ActionBarActivity {
             mTable = mClient.getTable(SignalResponder.class);
             NotificationsManager.handleNotifications(this, SENDER_ID, RattSignalHandler.class);
         } catch (Exception e) {
+            e.printStackTrace();
             createAndShowDialog(new Exception("There was an error connecting to the mobile service."), "Error");
         }
     }
@@ -92,6 +96,7 @@ public class SignalActivity extends ActionBarActivity {
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
+        Log.d(DEBUG_TAG, "Storing isResponding to shared preferences");
         SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
         sp.edit().putBoolean(RESPONDING_KEY, isResponding).apply();
     }
@@ -112,6 +117,8 @@ public class SignalActivity extends ActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivityForResult(intent, 0);
             return true;
         }
 
@@ -137,6 +144,8 @@ public class SignalActivity extends ActionBarActivity {
     }
 
     private void refreshRespondingCount() {
+        Log.d(DEBUG_TAG, "refreshing responders count");
+
         new AsyncTask<Void, Void, Void>() {
           @Override
         public Void doInBackground(Void... params) {
@@ -156,6 +165,7 @@ public class SignalActivity extends ActionBarActivity {
                       }
                   });
               } catch (Exception e) {
+                  e.printStackTrace();
                   createAndShowDialog(e, "Error");
               }
               return null;
@@ -170,10 +180,11 @@ public class SignalActivity extends ActionBarActivity {
      *              Boolean of if this device is responding or not
      */
     private void respondToSignal(final boolean responding) {
+        Log.d(DEBUG_TAG, "Responding to signal: " + responding);
+
         new AsyncTask<Void, Void, Void>() {
             @Override
             public Void doInBackground(Void... params) {
-
                 try {
                     mTable.insert(new SignalResponder(Installation.id(SignalActivity.this), responding)).get();
                     setResponding(responding);
@@ -186,6 +197,7 @@ public class SignalActivity extends ActionBarActivity {
                     });
 
                 } catch (Exception e) {
+                    e.printStackTrace();
                     createAndShowDialog(e, "Error");
                 }
 
@@ -280,12 +292,24 @@ public class SignalActivity extends ActionBarActivity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            this.mSirenImageView = (ImageView) container.findViewById(R.id.sirenImageView);
-            this.mRespondingImageView = (ImageView) container.findViewById(R.id.respondingImageView);
-            this.mCountTextView = (TextView) container.findViewById(R.id.countTextView);
-            this.mProgressBar = (ProgressBar) container.findViewById(R.id.progressBar);
+
+            View view = inflater.inflate(R.layout.fragment_signal, container, false);
+            this.mSirenImageView = (ImageView) view.findViewById(R.id.sirenImageView);
+            this.mRespondingImageView = (ImageView) view.findViewById(R.id.respondingImageView);
+            this.mCountTextView = (TextView) view.findViewById(R.id.countTextView);
+            this.mProgressBar = (ProgressBar) view.findViewById(R.id.progressBar);
             mProgressBar.setVisibility(ProgressBar.GONE);
-            return inflater.inflate(R.layout.fragment_signal, container, false);
+            return view;
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+
+            Activity activity = getActivity();
+            if (activity != null) {
+                ((SignalActivity) activity).onFragmentReady(this);
+            }
         }
 
         public void setResponding(boolean responding) {
