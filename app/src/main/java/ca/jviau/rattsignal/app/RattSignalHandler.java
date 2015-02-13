@@ -39,6 +39,7 @@ public class RattSignalHandler extends NotificationsHandler {
     public void onReceive(Context context, Bundle bundle) {
         // TODO: read bundle for # of people at RATT, only notify if certain #.
         String nhMessage = bundle.getString("message");
+        int count = bundle.getInt("count");
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         if (sp.getBoolean("push_notifications", false)) {

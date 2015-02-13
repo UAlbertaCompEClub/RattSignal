@@ -5,5 +5,7 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="siren_image_view_description">Red Siren Image</string>
+    <string name="signal_default_text">signal off</string>
+    <string name="responding_image_description">Responding checkmark image</string>
 
 </resources>

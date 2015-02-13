@@ -23,4 +23,24 @@
         android:id="@+id/progressBar"
         android:layout_gravity="end|top"/>
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large.Inverse"
+        android:id="@+id/countTextView"
+        android:layout_gravity="right|bottom"
+        android:clickable="true"
+        android:padding="10dp"
+        android:text="@string/signal_default_text"/>
+
+    <ImageView
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:id="@+id/respondingImageView"
+        android:layout_gravity="left|bottom"
+        android:padding="10dp"
+        android:src="@drawable/ic_action_accept"
+        android:cropToPadding="false"
+        android:contentDescription="@string/responding_image_description"/>
+
 </FrameLayout>

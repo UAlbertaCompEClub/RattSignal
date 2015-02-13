@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,24 +15,29 @@ import android.view.ViewGroup;
 
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.microsoft.windowsazure.mobileservices.MobileServiceClient;
+import com.microsoft.windowsazure.mobileservices.MobileServiceList;
 import com.microsoft.windowsazure.mobileservices.table.MobileServiceTable;
 import com.microsoft.windowsazure.notifications.NotificationsManager;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ExecutionException;
 
 
 public class SignalActivity extends ActionBarActivity {
 
+    public static final String DEBUG_TAG = "SignalActivity";
     public static final String SENDER_ID = "113";
     public static final String RESPONDING_KEY = "responding";
 
     public static MobileServiceClient mClient;
     private MobileServiceTable<SignalResponder> mTable;
     private boolean isResponding;
+    private SignalFragment mFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,35 +49,43 @@ public class SignalActivity extends ActionBarActivity {
                     .commit();
         }
 
+        this.mFragment = (SignalFragment) getSupportFragmentManager().findFragmentById(R.id.container);
+
         SharedPreferences sp = getSharedPreferences(SignalActivity.class.getSimpleName(), MODE_PRIVATE);
         isResponding = sp.getBoolean(RESPONDING_KEY, false);
 
         setUpMobileService();
+        setUpOnClicks();
     }
 
     private void setUpMobileService() {
         try {
-            SignalFragment fragment = (SignalFragment) getSupportFragmentManager().findFragmentById(R.id.container);
-            ProgressBar progressBar = fragment.getProgressBar();
-
             JsonObject azure_info = parseJsonFile(R.raw.mobile_services);
             mClient = new MobileServiceClient(
                     azure_info.get("url").getAsString(),
                     azure_info.get("key").getAsString(),
                     this)
-                    .withFilter(new ProgressFilter(this, progressBar));
+                    .withFilter(new ProgressFilter(this, mFragment.getProgressBar()));
             mTable = mClient.getTable(SignalResponder.class);
             NotificationsManager.handleNotifications(this, SENDER_ID, RattSignalHandler.class);
-
-            fragment.getImageView().setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    respondToSignal(!getResponding());
-                }
-            });
         } catch (Exception e) {
             createAndShowDialog(new Exception("There was an error connecting to the mobile service."), "Error");
         }
+    }
+
+    private void setUpOnClicks() {
+        mFragment.getSirenImageView().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                respondToSignal(!getResponding());
+            }
+        });
+        mFragment.getCountTextView().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                refreshRespondingCount();
+            }
+        });
     }
 
     @Override
@@ -122,6 +136,33 @@ public class SignalActivity extends ActionBarActivity {
         return (JsonObject) new JsonParser().parse(new String(buffer, "UTF-8"));
     }
 
+    private void refreshRespondingCount() {
+        new AsyncTask<Void, Void, Void>() {
+          @Override
+        public Void doInBackground(Void... params) {
+              try {
+                  MobileServiceList<SignalResponder> results = mTable.top(0).includeInlineCount().execute().get();
+                  final int count = results.getTotalCount();
+                  Log.d(DEBUG_TAG, String.format("Retrieved count of %d responders.", count));
+
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          if (count > 0) {
+                              mFragment.getCountTextView().setText(String.format("%d responding", count));
+                          } else {
+                              mFragment.getCountTextView().setText("");
+                          }
+                      }
+                  });
+              } catch (Exception e) {
+                  createAndShowDialog(e, "Error");
+              }
+              return null;
+          }
+        };
+    }
+
     /**
      * Sets the responding state of this device in the mobile service
      *
@@ -136,6 +177,14 @@ public class SignalActivity extends ActionBarActivity {
                 try {
                     mTable.insert(new SignalResponder(Installation.id(SignalActivity.this), responding)).get();
                     setResponding(responding);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mFragment.setResponding(responding);
+                        }
+                    });
+
                 } catch (Exception e) {
                     createAndShowDialog(e, "Error");
                 }
@@ -203,14 +252,25 @@ public class SignalActivity extends ActionBarActivity {
      */
     public static class SignalFragment extends Fragment {
 
-        private ImageView mImageView;
+        private ImageView mSirenImageView;
+        private ImageView mRespondingImageView;
+        private TextView mCountTextView;
         private ProgressBar mProgressBar;
+
 
         public SignalFragment() {
         }
 
-        public ImageView getImageView() {
-            return mImageView;
+        public ImageView getSirenImageView() {
+            return mSirenImageView;
+        }
+
+        public ImageView getRespondingImageView() {
+            return mRespondingImageView;
+        }
+
+        public TextView getCountTextView() {
+            return mCountTextView;
         }
 
         public ProgressBar getProgressBar() {
@@ -220,11 +280,20 @@ public class SignalActivity extends ActionBarActivity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            this.mImageView = (ImageView) container.findViewById(R.id.sirenImageView);
+            this.mSirenImageView = (ImageView) container.findViewById(R.id.sirenImageView);
+            this.mRespondingImageView = (ImageView) container.findViewById(R.id.respondingImageView);
+            this.mCountTextView = (TextView) container.findViewById(R.id.countTextView);
             this.mProgressBar = (ProgressBar) container.findViewById(R.id.progressBar);
             mProgressBar.setVisibility(ProgressBar.GONE);
-
             return inflater.inflate(R.layout.fragment_signal, container, false);
+        }
+
+        public void setResponding(boolean responding) {
+            if (responding) {
+                mRespondingImageView.setVisibility(View.VISIBLE);
+            } else {
+                mRespondingImageView.setVisibility(View.INVISIBLE);
+            }
         }
     }
 }
